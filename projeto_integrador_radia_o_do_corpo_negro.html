@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeto Integrador: Radiação do Corpo Negro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+        }
+        .glow-red {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.35);
+        }
+        .glow-blue {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.35);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.4);
+        }
+        .spectrum-bar {
+            background: linear-gradient(to right, 
+                #4c1d95 0%,   /* UV / Roxo */
+                #3b82f6 15%,  /* Azul */
+                #06b6d4 30%,  /* Ciano */
+                #22c55e 45%,  /* Verde */
+                #eab308 60%,  /* Amarelo */
+                #ef4444 75%,  /* Vermelho */
+                #7f1d1d 100%  /* Infravermelho */
+            );
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl text-slate-950">
+                    <i data-lucide="zap" class="w-6 h-6 stroke-[2.5]"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-100">Radiação do Corpo Negro</h1>
+                    <p class="text-xs text-slate-400">Projeto Integrador: Física, Robótica e Programação</p>
+                </div>
+            </div>
+
+            <!-- Web Serial Status Badge & Button -->
+            <div class="flex items-center gap-3">
+                <div id="serialStatus" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-400">
+                    <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    <span id="statusText">Arduino Desconectado</span>
+                </div>
+                <button id="btnConnect" onclick="toggleSerialConnection()" class="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-95">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                    <span>Conectar Arduino</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-10">
+
+        <!-- Top Section: Dashboard Control & Sphere Preview -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Controles de Temperatura -->
+            <div class="lg:col-span-1 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl flex flex-col justify-between space-y-6 backdrop-blur">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="thermometer" class="text-cyan-400 w-5 h-5"></i>
+                            Temperatura do Corpo
+                        </h2>
+                        <span id="tempValue" class="text-2xl font-black text-cyan-400 tracking-wider">5778 K</span>
+                    </div>
+
+                    <!-- Slider -->
+                    <input type="range" id="tempSlider" min="300" max="12000" step="50" value="5778" 
+                        class="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400 mb-6">
+
+                    <!-- Presets Rápidos -->
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Presets de Temperatura:</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setTemperature(300)" class="p-2.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-xl text-slate-300 transition-all text-left">
+                            <span class="block font-bold text-red-400">300 K</span>
+                            Ambiente / IR
+                        </button>
+                        <button onclick="setTemperature(3000)" class="p-2.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-xl text-slate-300 transition-all text-left">
+                            <span class="block font-bold text-amber-400">3000 K</span>
+                            Lâmpada / Vermelho
+                        </button>
+                        <button onclick="setTemperature(5778)" class="p-2.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-xl text-slate-300 transition-all text-left">
+                            <span class="block font-bold text-yellow-300">5778 K</span>
+                            Superfície do Sol
+                        </button>
+                        <button onclick="setTemperature(10000)" class="p-2.5 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 rounded-xl text-slate-300 transition-all text-left">
+                            <span class="block font-bold text-blue-400">10000 K</span>
+                            Estrela Azul
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estatísticas Calculadas (Lei de Wien) -->
+                <div class="pt-4 border-t border-slate-800/80 space-y-3">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">Pico de Onda (&lambda;<sub>max</sub>):</span>
+                        <span id="peakWavelength" class="font-mono font-bold text-cyan-300">501.7 nm</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">Região Dominante:</span>
+                        <span id="spectrumRegion" class="font-semibold text-emerald-400">Luz Visível (Verde/Amarelo)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualização da Cor Simulada (Esfera Radiante) -->
+            <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl flex flex-col justify-between backdrop-blur">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="eye" class="text-cyan-400 w-5 h-5"></i>
+                        Simulação Visual da Cor Emitida (Lei de Wien)
+                    </h2>
+                    <span class="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-md">Simulador de Espectro</span>
+                </div>
+
+                <div class="flex flex-col md:flex-row items-center justify-around gap-8 py-6">
+                    <!-- Esfera Fluida de Luz -->
+                    <div class="relative flex items-center justify-center">
+                        <div id="glowSphere" class="w-40 h-40 rounded-full transition-all duration-500 glow-cyan flex items-center justify-center border-2 border-white/20" style="background-color: rgb(255, 230, 200);">
+                            <div class="w-28 h-28 rounded-full bg-white/20 backdrop-blur-sm border border-white/30"></div>
+                        </div>
+                    </div>
+
+                    <!-- Explicação Rápida da Cor -->
+                    <div class="max-w-md space-y-3 text-sm text-slate-300">
+                        <div class="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+                            <p class="font-semibold text-cyan-400 flex items-center gap-1.5">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                                O que está acontecendo?
+                            </p>
+                            <p id="colorExplanation" class="text-xs leading-relaxed text-slate-400">
+                                Na temperatura atual, o corpo negro emite o pico de sua radiação no comprimento de onda visível. É exatamente assim que o Sol e as estrelas brilham!
+                            </p>
+                        </div>
+                        
+                        <!-- Barra de Espectro -->
+                        <div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mb-1 font-mono uppercase">
+                                <span>UV</span>
+                                <span>400nm (Visível) 700nm</span>
+                                <span>Infravermelho</span>
+                            </div>
+                            <div class="h-3 w-full rounded-full spectrum-bar relative overflow-hidden">
+                                <div id="spectrumMarker" class="absolute top-0 bottom-0 w-1.5 bg-white border border-black transition-all duration-300" style="left: 50%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-500 text-center border-t border-slate-800/80 pt-3">
+                    Nota: Temperaturas baixas (&lt; 800 K) emitem radiação predominantemente Infravermelha, invisível aos olhos humanos.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Middle Section: Chart (Planck Curve) -->
+        <div class="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl backdrop-blur space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                        <i data-lucide="activity" class="text-cyan-400 w-5 h-5"></i>
+                        Curva de Radiação de Planck
+                    </h2>
+                    <p class="text-xs text-slate-400">Distribuição da intensidade de radiação por comprimento de onda (&lambda;)</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-mono">
+                    <span class="flex items-center gap-1.5 text-cyan-400">
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span>
+                        Temperatura Atual
+                    </span>
+                    <span class="flex items-center gap-1.5 text-slate-500">
+                        <span class="w-3 h-3 rounded-full bg-slate-600 inline-block"></span>
+                        Referência (Sol - 5778K)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Canvas do Gráfico -->
+            <div class="w-full h-80 relative">
+                <canvas id="planckChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Integração Robótica e Teoria de Física -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Card 1: Robótica e Arduino -->
+            <div class="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl space-y-4 backdrop-blur">
+                <div class="p-3 bg-cyan-500/10 border border-cyan-500/20 w-fit rounded-xl text-cyan-400">
+                    <i data-lucide="cpu" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-100">1. Robótica (Arduino)</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Utilizamos um <b>Arduino</b> com um <b>LED RGB</b> e um <b>Sensor Infravermelho</b>. O LED simula a mudança de cor da radiação emitida pelo corpo à medida que esquenta, trocando entre o Infravermelho, Vermelho e Azul em tempo real.
+                </p>
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 text-xs font-mono text-slate-400 space-y-1">
+                    <p class="text-cyan-400 font-bold">Saída Serial Esperada:</p>
+                    <p>TEMP:300,COR:Infravermelho</p>
+                    <p>TEMP:3000,COR:Vermelho</p>
+                    <p>TEMP:10000,COR:Azul</p>
+                </div>
+            </div>
+
+            <!-- Card 2: Teoria da Física -->
+            <div class="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl space-y-4 backdrop-blur">
+                <div class="p-3 bg-amber-500/10 border border-amber-500/20 w-fit rounded-xl text-amber-400">
+                    <i data-lucide="book-open" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-100">2. Física e Ciências</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    A <b>Lei de Wien</b> estabelece que quanto maior a temperatura de um corpo negro, menor é o comprimento de onda do pico emissor ($\lambda_{max} \cdot T = 2,897 \times 10^{-3} \text{ m}\cdot\text{K}$). Isso deu origem à Física Quântica com Max Planck em 1900.
+                </p>
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 text-xs text-slate-300 space-y-1">
+                    <p class="font-bold text-amber-400">Fórmulas Principais:</p>
+                    <p>• <b>Lei de Wien:</b> $\lambda_{max} = b / T$</p>
+                    <p>• <b>Stefan-Boltzmann:</b> $P = \sigma \cdot A \cdot T^4$</p>
+                </div>
+            </div>
+
+            <!-- Card 3: Programação Web -->
+            <div class="bg-slate-900/60 border border-slate-800/80 p-6 rounded-2xl space-y-4 backdrop-blur">
+                <div class="p-3 bg-blue-500/10 border border-blue-500/20 w-fit rounded-xl text-blue-400">
+                    <i data-lucide="code" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-100">3. Programação</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Este site foi desenvolvido em <b>HTML5, Tailwind CSS e JavaScript</b>. Ele utiliza a <b>Web Serial API</b> nativa dos navegadores para se comunicar via porta COM/USB com o Arduino sem precisar de softwares adicionais instalados no PC.
+                </p>
+                <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 text-xs text-slate-300 space-y-1">
+                    <p class="font-bold text-blue-400">Hospedagem:</p>
+                    <p>Publicado gratuitamente através do <b>GitHub Pages</b> diretamente do repositório do projeto.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/50 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-1">
+            <p>Projeto Integrador - Radiação do Corpo Negro • Física, Robótica e Programação</p>
+            <p class="text-slate-600">Desenvolvido para apresentação escolar e hospedado no GitHub Pages</p>
+        </div>
+    </footer>
+
+    <!-- Scripts JavaScript do Site -->
+    <script>
+        // Inicializar ícones do Lucide
+        lucide.createIcons();
+
+        // Variáveis de Estado
+        let currentTemp = 5778;
+        let chartInstance = null;
+        let serialPort = null;
+        let serialReader = null;
+
+        // Constante da Lei de Wien (nm * K)
+        const WIEN_CONSTANT = 2897771.95;
+
+        // Elementos do DOM
+        const tempSlider = document.getElementById('tempSlider');
+        const tempValue = document.getElementById('tempValue');
+        const peakWavelength = document.getElementById('peakWavelength');
+        const spectrumRegion = document.getElementById('spectrumRegion');
+        const glowSphere = document.getElementById('glowSphere');
+        const colorExplanation = document.getElementById('colorExplanation');
+        const spectrumMarker = document.getElementById('spectrumMarker');
+
+        // Inicialização ao carregar a página
+        window.addEventListener('load', () => {
+            initChart();
+            updateSimulation(currentTemp);
+        });
+
+        // Atualizar temperatura pelo Slider
+        tempSlider.addEventListener('input', (e) => {
+            setTemperature(parseFloat(e.target.value));
+        });
+
+        function setTemperature(temp) {
+            currentTemp = temp;
+            tempSlider.value = temp;
+            tempValue.innerText = `${Math.round(temp)} K`;
+            updateSimulation(temp);
+        }
+
+        // Função de cálculo aproximado de intensidade de Planck (normalizada)
+        function calculatePlanck(wavelengthNm, T) {
+            const lambda = wavelengthNm * 1e-9; // metros
+            const h = 6.626e-34; // Constante de Planck
+            const c = 3.0e8;     // Velocidade da luz
+            const k = 1.38e-23;  // Constante de Boltzmann
+
+            const exponent = (h * c) / (lambda * k * T);
+            if (exponent > 700) return 0; // Prevenir overflow exponencial
+
+            const intensity = (2 * h * Math.pow(c, 2)) / (Math.pow(lambda, 5) * (Math.exp(exponent) - 1));
+            return intensity;
+        }
+
+        // Atualiza os componentes visuais e o gráfico
+        function updateSimulation(T) {
+            // 1. Lei de Wien: Lambda Max em nm
+            const peakNm = WIEN_CONSTANT / T;
+            peakWavelength.innerText = `${peakNm.toFixed(1)} nm`;
+
+            // 2. Definir Cor da Esfera e Descrição
+            const rgbColor = temperatureToRGB(T);
+            glowSphere.style.backgroundColor = `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`;
+            glowSphere.style.boxShadow = `0 0 35px rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5)`;
+
+            // Atualizar Marcador do Espectro Visível (380nm a 750nm)
+            let markerPercent = ((peakNm - 100) / (1200 - 100)) * 100;
+            markerPercent = Math.max(0, Math.min(100, markerPercent));
+            spectrumMarker.style.left = `${markerPercent}%`;
+
+            // Atualizar Descrição da Região
+            if (peakNm < 380) {
+                spectrumRegion.innerText = "Ultravioleta (Invisível)";
+                spectrumRegion.className = "font-semibold text-purple-400";
+                colorExplanation.innerText = `Em ${Math.round(T)} K, a maioria da energia é emitida na faixa do Ultravioleta (alta frequência). O objeto brilha com uma tonalidade azul-violeta intensa.`;
+            } else if (peakNm >= 380 && peakNm <= 750) {
+                spectrumRegion.innerText = "Luz Visível";
+                spectrumRegion.className = "font-semibold text-emerald-400";
+                colorExplanation.innerText = `Em ${Math.round(T)} K, o pico de emissão está exatamente dentro do espectro visível ao olho humano.`;
+            } else {
+                spectrumRegion.innerText = "Infravermelho (Invisível)";
+                spectrumRegion.className = "font-semibold text-red-400";
+                colorExplanation.innerText = `Em ${Math.round(T)} K, a radiação é quase totalmente Infravermelha (calor). O objeto não brilha forte no visível, mas pode ser sentido como calor.`;
+            }
+
+            // 3. Atualizar Dados do Gráfico
+            updateChartData(T);
+        }
+
+        // Converte Temperatura Kelvin para Cor RGB Aproximada (Algoritmo de Tanner Helland)
+        function temperatureToRGB(kelvin) {
+            let temp = kelvin / 100;
+            let red, green, blue;
+
+            if (temp <= 66) {
+                red = 255;
+                green = Math.min(255, Math.max(0, 99.4708025861 * Math.log(temp) - 161.1195681661));
+                blue = temp <= 19 ? 0 : Math.min(255, Math.max(0, 138.5177312231 * Math.log(temp - 10) - 305.0447927307));
+            } else {
+                red = Math.min(255, Math.max(0, 329.698727446 * Math.pow(temp - 60, -0.1332047592)));
+                green = Math.min(255, Math.max(0, 288.1221695283 * Math.pow(temp - 60, -0.0755148492)));
+                blue = 255;
+            }
+
+            return { r: Math.round(red), g: Math.round(green), b: Math.round(blue) };
+        }
+
+        // Inicializador do Gráfico com Chart.js
+        function initChart() {
+            const ctx = document.getElementById('planckChart').getContext('2d');
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [], // Comprimentos de onda
+                    datasets: [
+                        {
+                            label: 'Temperatura Atual',
+                            data: [],
+                            borderColor: '#06b6d4',
+                            borderWidth: 3,
+                            fill: true,
+                            backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Referência Sol (5778 K)',
+                            data: [],
+                            borderColor: 'rgba(148, 163, 184, 0.3)',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Comprimento de Onda λ (nm)', color: '#94a3b8' },
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Intensidade Relativa', color: '#94a3b8' },
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Atualiza a curva no gráfico
+        function updateChartData(T) {
+            if (!chartInstance) return;
+
+            const wavelengths = [];
+            const currentData = [];
+            const sunData = [];
+
+            // Gerar 60 pontos de onda entre 100nm e 2000nm
+            for (let wave = 100; wave <= 2000; wave += 30) {
+                wavelengths.push(wave);
+                currentData.push(calculatePlanck(wave, T));
+                sunData.push(calculatePlanck(wave, 5778));
+            }
+
+            // Normalizar valores para exibição no gráfico
+            const maxCurrent = Math.max(...currentData);
+            const maxSun = Math.max(...sunData);
+            const scaleFactor = Math.max(maxCurrent, maxSun) || 1;
+
+            chartInstance.data.labels = wavelengths;
+            chartInstance.data.datasets[0].data = currentData.map(v => (v / scaleFactor) * 100);
+            chartInstance.data.datasets[1].data = sunData.map(v => (v / scaleFactor) * 100);
+
+            // Trocar a cor da linha com base na temperatura
+            const rgb = temperatureToRGB(T);
+            chartInstance.data.datasets[0].borderColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            chartInstance.data.datasets[0].backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;
+
+            chartInstance.update('none'); // Atualização rápida sem animação travada
+        }
+
+        // =========================================================================
+        // INTEGRACÃO WEB SERIAL API (ARDUINO)
+        // =========================================================================
+        async function toggleSerialConnection() {
+            if (!("serial" in navigator)) {
+                alert("A Web Serial API não é suportada neste navegador. Use o Google Chrome ou Microsoft Edge.");
+                return;
+            }
+
+            if (serialPort) {
+                // Fechar Conexão
+                try {
+                    if (serialReader) await serialReader.cancel();
+                    await serialPort.close();
+                } catch (e) { console.error(e); }
+                serialPort = null;
+                updateSerialStatus(false);
+                return;
+            }
+
+            try {
+                // Solicitar seleção da porta USB/Serial pelo usuário
+                serialPort = await navigator.serial.requestPort();
+                await serialPort.open({ baudRate: 9600 });
+                updateSerialStatus(true);
+                readSerialData();
+            } catch (err) {
+                console.error("Erro ao conectar à Serial:", err);
+                updateSerialStatus(false);
+            }
+        }
+
+        async function readSerialData() {
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = serialPort.readable.pipeTo(textDecoder.writable);
+            serialReader = textDecoder.readable.getReader();
+
+            let buffer = "";
+
+            try {
+                while (true) {
+                    const { value, done } = await serialReader.read();
+                    if (done) break;
+                    
+                    buffer += value;
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop(); // Mantém o pedaço incompleto no buffer
+
+                    for (const line of lines) {
+                        parseArduinoLine(line.trim());
+                    }
+                }
+            } catch (error) {
+                console.error("Erro de Leitura Serial:", error);
+            } finally {
+                serialReader.releaseLock();
+            }
+        }
+
+        // Processa linhas enviadas pelo Arduino como: TEMP:3000,COR:Vermelho
+        function parseArduinoLine(line) {
+            if (!line.includes("TEMP:")) return;
+
+            try {
+                const parts = line.split(",");
+                const tempPart = parts.find(p => p.startsWith("TEMP:"));
+
+                if (tempPart) {
+                    const tempVal = parseFloat(tempPart.replace("TEMP:", ""));
+                    if (!isNaN(tempVal)) {
+                        setTemperature(tempVal);
+                    }
+                }
+            } catch (err) {
+                console.error("Erro no parse da linha:", line);
+            }
+        }
+
+        function updateSerialStatus(isConnected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const btnConnect = document.getElementById('btnConnect');
+
+            if (isConnected) {
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+                statusText.innerText = "Arduino Conectado";
+                btnConnect.classList.replace("bg-cyan-500", "bg-emerald-500");
+                btnConnect.classList.replace("hover:bg-cyan-400", "hover:bg-emerald-400");
+                btnConnect.querySelector("span").innerText = "Desconectar";
+            } else {
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+                statusText.innerText = "Arduino Desconectado";
+                btnConnect.classList.replace("bg-emerald-500", "bg-cyan-500");
+                btnConnect.classList.replace("hover:bg-emerald-400", "hover:bg-cyan-400");
+                btnConnect.querySelector("span").innerText = "Conectar Arduino";
+            }
+        }
+    </script>
+</body>
+</html>
